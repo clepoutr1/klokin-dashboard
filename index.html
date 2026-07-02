@@ -430,26 +430,27 @@ async function generarReporte() {
       const key = `${m.nombre} ${m.apellido}||${dia}`;
       if (!grupos[key]) grupos[key] = { nombre: `${m.nombre} ${m.apellido}`, dia, entradas: [], salidas: [], geos: [] };
       if (m.tipo === 'ENTRADA') {
-        grupos[key].entradas.push(new Date(m.timestamp).toLocaleTimeString('es-EC',{timeZone:'America/Guayaquil',hour:'2-digit',minute:'2-digit'}));
+        grupos[key].entradas.push({hora: m.timestamp, str: new Date(m.timestamp).toLocaleTimeString('es-EC',{timeZone:'America/Guayaquil',hour:'2-digit',minute:'2-digit'})});
         if (m.latitud && m.longitud) grupos[key].geos.push(`${parseFloat(m.latitud).toFixed(5)}, ${parseFloat(m.longitud).toFixed(5)}`);
       }
       if (m.tipo === 'SALIDA') {
-        grupos[key].salidas.push(new Date(m.timestamp).toLocaleTimeString('es-EC',{timeZone:'America/Guayaquil',hour:'2-digit',minute:'2-digit'}));
+        grupos[key].salidas.push({hora: m.timestamp, str: new Date(m.timestamp).toLocaleTimeString('es-EC',{timeZone:'America/Guayaquil',hour:'2-digit',minute:'2-digit'})});
       }
     });
 
-    // Calcular horas trabajadas
+    // Calcular horas trabajadas usando timestamps reales
     const filas = Object.values(grupos).map(g => {
-      const entrada = g.entradas[0] || '—';
-      const salida = g.salidas[g.salidas.length-1] || '—';
+      const entrada = g.entradas[0]?.hora || null;
+      const salida = g.salidas[g.salidas.length-1]?.hora || null;
+      const entradaStr = g.entradas[0]?.str || '—';
+      const salidaStr = g.salidas[g.salidas.length-1]?.str || '—';
       let horas = '—';
-      if (entrada !== '—' && salida !== '—') {
-        const [eh,em] = entrada.split(':').map(Number);
-        const [sh,sm] = salida.split(':').map(Number);
-        const diffMin = (sh*60+sm) - (eh*60+em);
-        if (diffMin > 0) horas = `${Math.floor(diffMin/60)}h ${diffMin%60}min`;
+      let minutosTotales = 0;
+      if (entrada && salida) {
+        const diffMin = Math.round((new Date(salida) - new Date(entrada)) / 60000);
+        if (diffMin > 0) { horas = `${Math.floor(diffMin/60)}h ${diffMin%60}min`; minutosTotales = diffMin; }
       }
-      return { nombre: g.nombre, dia: g.dia, entrada, salida, ubicacion: g.geos[0] || '—', horas };
+      return { nombre: g.nombre, dia: g.dia, entrada: entradaStr, salida: salidaStr, ubicacion: g.geos[0] || '—', horas, minutosTotales };
     }).sort((a,b) => a.nombre.localeCompare(b.nombre) || a.dia.localeCompare(b.dia));
 
     // Calcular resumen consolidado por empleado
@@ -457,13 +458,9 @@ async function generarReporte() {
     filas.forEach(f => {
       if (!resumen[f.nombre]) resumen[f.nombre] = { nombre: f.nombre, diasTrabajados: 0, totalMinutos: 0, tardanzas: 0, horasExtras: 0 };
       resumen[f.nombre].diasTrabajados++;
-      if (f.horas !== '—') {
-        const match = f.horas.match(/(\d+)h (\d+)min/);
-        if (match) {
-          const mins = parseInt(match[1])*60 + parseInt(match[2]);
-          resumen[f.nombre].totalMinutos += mins;
-          if (mins > 480) resumen[f.nombre].horasExtras += mins - 480;
-        }
+      if (f.minutosTotales > 0) {
+        resumen[f.nombre].totalMinutos += f.minutosTotales;
+        if (f.minutosTotales > 480) resumen[f.nombre].horasExtras += f.minutosTotales - 480;
       }
     });
     marcaciones.forEach(m => {
