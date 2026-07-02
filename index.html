@@ -3,195 +3,232 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Klokin — Dashboard RRHH</title>
-<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<title>Klokin — Panel de Asistencia</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <style>
-  :root {
-    --bg: #0a0f0d;
-    --surface: #111812;
-    --surface2: #162019;
-    --border: #1e2e22;
-    --green: #22c55e;
-    --green-glow: rgba(34,197,94,0.15);
-    --red: #ef4444;
-    --amber: #f59e0b;
-    --text: #e2f0e6;
-    --text-dim: #6b8f74;
-    --text-muted: #3d5c45;
-  }
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-serif; min-height: 100vh; }
-  body::before { content: ''; position: fixed; inset: 0; background-image: linear-gradient(rgba(34,197,94,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(34,197,94,0.03) 1px, transparent 1px); background-size: 40px 40px; pointer-events: none; z-index: 0; }
-  header { position: relative; z-index: 10; display: flex; align-items: center; justify-content: space-between; padding: 20px 32px; border-bottom: 1px solid var(--border); background: rgba(10,15,13,0.9); backdrop-filter: blur(10px); }
-  .logo { display: flex; align-items: center; gap: 12px; }
-  .logo-icon { width: 36px; height: 36px; background: var(--green); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-family: 'Syne', sans-serif; font-weight: 800; font-size: 16px; color: #0a0f0d; }
-  .logo-text { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 20px; }
-  .logo-sub { font-size: 11px; color: var(--text-dim); font-family: 'DM Mono', monospace; }
-  .header-right { display: flex; align-items: center; gap: 16px; }
-  .empresa-badge { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--green); background: var(--green-glow); border: 1px solid rgba(34,197,94,0.2); padding: 6px 12px; border-radius: 6px; }
-  .status-dot { width: 8px; height: 8px; background: var(--green); border-radius: 50%; animation: pulse 2s infinite; }
-  @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.6;transform:scale(1.3)} }
-  .timestamp { font-family: 'DM Mono', monospace; font-size: 12px; color: var(--text-dim); }
-  .btn-refresh { background: var(--surface2); border: 1px solid var(--border); color: var(--text-dim); padding: 6px 14px; border-radius: 6px; font-family: 'DM Mono', monospace; font-size: 11px; cursor: pointer; transition: all .2s; }
-  .btn-refresh:hover { border-color: var(--green); color: var(--green); }
-  #login-screen { position: fixed; inset: 0; background: var(--bg); z-index: 100; display: flex; align-items: center; justify-content: center; }
-  .login-box { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 48px; width: 380px; text-align: center; }
-  .login-logo { width: 56px; height: 56px; background: var(--green); border-radius: 14px; display: flex; align-items: center; justify-content: center; font-family: 'Syne', sans-serif; font-weight: 800; font-size: 24px; color: #0a0f0d; margin: 0 auto 24px; }
-  .login-title { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 24px; margin-bottom: 8px; }
-  .login-sub { font-size: 13px; color: var(--text-dim); margin-bottom: 32px; }
-  .form-group { margin-bottom: 16px; text-align: left; }
-  .form-group label { display: block; font-size: 12px; font-family: 'DM Mono', monospace; color: var(--text-dim); margin-bottom: 6px; }
-  .form-group input { width: 100%; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 12px 16px; color: var(--text); font-size: 14px; outline: none; transition: border-color .2s; }
-  .form-group input:focus { border-color: var(--green); }
-  .btn-login { width: 100%; background: var(--green); color: #0a0f0d; border: none; border-radius: 8px; padding: 13px; font-family: 'Syne', sans-serif; font-weight: 700; font-size: 14px; cursor: pointer; margin-top: 8px; }
-  .login-error { color: var(--red); font-size: 13px; margin-top: 12px; display: none; }
-  main { position: relative; z-index: 1; padding: 32px; max-width: 1400px; margin: 0 auto; }
-  .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 32px; }
-  .kpi-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 24px; transition: border-color .2s; }
-  .kpi-card:hover { border-color: rgba(34,197,94,0.3); }
-  .kpi-label { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; }
-  .kpi-value { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 42px; line-height: 1; margin-bottom: 8px; }
-  .kpi-value.green { color: var(--green); }
-  .kpi-value.red { color: var(--red); }
-  .kpi-value.amber { color: var(--amber); }
-  .kpi-value.white { color: var(--text); }
-  .kpi-sub { font-size: 12px; color: var(--text-dim); }
-  .progress-bar { height: 3px; background: var(--border); border-radius: 2px; margin-top: 12px; overflow: hidden; }
-  .progress-fill { height: 100%; background: var(--green); border-radius: 2px; transition: width .8s ease; }
-  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-bottom: 16px; }
-  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
-  .panel { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
-  .panel-header { display: flex; align-items: center; justify-content: space-between; padding: 20px 24px; border-bottom: 1px solid var(--border); }
-  .panel-title { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 14px; display: flex; align-items: center; gap: 8px; }
-  .panel-badge { font-family: 'DM Mono', monospace; font-size: 10px; background: var(--green-glow); color: var(--green); border: 1px solid rgba(34,197,94,0.2); padding: 3px 8px; border-radius: 4px; }
-  .panel-body { padding: 0; max-height: 320px; overflow-y: auto; }
-  .panel-body::-webkit-scrollbar { width: 4px; }
-  .panel-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
-  .emp-row { display: flex; align-items: center; padding: 14px 24px; border-bottom: 1px solid var(--border); gap: 12px; transition: background .15s; cursor: pointer; }
-  .emp-row:last-child { border-bottom: none; }
-  .emp-row:hover { background: var(--surface2); }
-  .emp-avatar { width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-family: 'Syne', sans-serif; font-weight: 700; font-size: 13px; flex-shrink: 0; }
-  .emp-avatar.present { background: var(--green-glow); color: var(--green); border: 1px solid rgba(34,197,94,0.3); }
-  .emp-avatar.absent { background: rgba(239,68,68,0.1); color: var(--red); border: 1px solid rgba(239,68,68,0.2); }
-  .emp-info { flex: 1; min-width: 0; }
-  .emp-name { font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .emp-meta { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--text-dim); margin-top: 2px; }
-  .emp-status { font-family: 'DM Mono', monospace; font-size: 10px; padding: 4px 8px; border-radius: 4px; flex-shrink: 0; }
-  .emp-status.present { background: var(--green-glow); color: var(--green); border: 1px solid rgba(34,197,94,0.2); }
-  .emp-status.absent { background: rgba(239,68,68,0.1); color: var(--red); border: 1px solid rgba(239,68,68,0.2); }
-  .activity-item { display: flex; align-items: center; padding: 12px 24px; border-bottom: 1px solid var(--border); gap: 12px; }
-  .activity-item:last-child { border-bottom: none; }
-  .activity-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
-  .activity-dot.entrada { background: var(--green); }
-  .activity-dot.salida { background: var(--amber); }
-  .activity-info { flex: 1; }
-  .activity-name { font-size: 13px; font-weight: 500; }
-  .activity-detail { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--text-dim); margin-top: 2px; }
-  .activity-time { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--text-muted); }
-  .late-badge { font-family: 'DM Mono', monospace; font-size: 9px; background: rgba(239,68,68,0.1); color: var(--red); border: 1px solid rgba(239,68,68,0.2); padding: 2px 6px; border-radius: 3px; margin-left: 6px; }
-  .geo-badge { font-family: 'DM Mono', monospace; font-size: 9px; background: rgba(34,197,94,0.1); color: var(--green); border: 1px solid rgba(34,197,94,0.2); padding: 2px 6px; border-radius: 3px; margin-left: 6px; }
-  .empty { padding: 48px 24px; text-align: center; color: var(--text-muted); font-family: 'DM Mono', monospace; font-size: 12px; }
-  .loading { display: flex; align-items: center; justify-content: center; padding: 48px; color: var(--text-muted); font-family: 'DM Mono', monospace; font-size: 12px; gap: 8px; }
-  .spinner { width: 16px; height: 16px; border: 2px solid var(--border); border-top-color: var(--green); border-radius: 50%; animation: spin .8s linear infinite; }
-  @keyframes spin { to { transform: rotate(360deg); } }
-  .section-title { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 2px; margin-bottom: 16px; margin-top: 32px; }
-  #toast { position: fixed; bottom: 24px; right: 24px; background: var(--surface); border: 1px solid var(--green); color: var(--green); padding: 12px 20px; border-radius: 8px; font-family: 'DM Mono', monospace; font-size: 12px; z-index: 1000; transform: translateY(100px); opacity: 0; transition: all .3s; }
-  #toast.show { transform: translateY(0); opacity: 1; }
-  #map { height: 400px; border-radius: 0 0 12px 12px; filter: brightness(0.85) saturate(0.7); }
-  .tag { font-family: 'DM Mono', monospace; font-size: 9px; padding: 2px 6px; border-radius: 3px; text-transform: uppercase; }
-  .tag.sub { background: rgba(245,158,11,0.1); color: var(--amber); border: 1px solid rgba(245,158,11,0.2); }
-  .tag.directo { background: rgba(34,197,94,0.08); color: var(--text-dim); border: 1px solid var(--border); }
-  @media (max-width: 768px) { .kpi-grid { grid-template-columns: repeat(2,1fr); } .grid-3,.grid-2 { grid-template-columns: 1fr; } main { padding: 16px; } }
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --navy:#1e2d3d;--navy-dark:#16222e;--navy-light:#2d4560;
+  --blue:#2563eb;--blue-light:#eff6ff;--blue-mid:#dbeafe;
+  --green:#16a34a;--green-light:#f0fdf4;--green-mid:#dcfce7;
+  --red:#dc2626;--red-light:#fef2f2;
+  --amber:#d97706;--amber-light:#fffbeb;
+  --gray-50:#f8fafc;--gray-100:#f1f5f9;--gray-200:#e2e8f0;
+  --gray-300:#cbd5e1;--gray-400:#94a3b8;--gray-500:#64748b;
+  --gray-600:#475569;--gray-700:#334155;--gray-800:#1e293b;
+  --text:#1e293b;--text-muted:#64748b;--text-light:#94a3b8;
+  --border:#e2e8f0;--surface:#ffffff;--bg:#f8fafc;
+}
+body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;font-size:14px;line-height:1.5;min-height:100vh}
+
+/* LOGIN */
+#login-screen{position:fixed;inset:0;background:var(--navy-dark);z-index:100;display:flex;align-items:center;justify-content:center}
+.login-box{background:var(--surface);border-radius:12px;padding:40px;width:360px;box-shadow:0 20px 60px rgba(0,0,0,0.3)}
+.login-logo{display:flex;align-items:center;gap:10px;margin-bottom:28px}
+.login-logo-icon{width:40px;height:40px;background:var(--navy);border-radius:8px;display:flex;align-items:center;justify-content:center;color:white;font-weight:600;font-size:16px}
+.login-logo-text{font-size:20px;font-weight:600;color:var(--navy)}
+.login-logo-sub{font-size:12px;color:var(--text-muted)}
+.login-title{font-size:22px;font-weight:600;color:var(--navy);margin-bottom:6px}
+.login-sub{font-size:13px;color:var(--text-muted);margin-bottom:28px}
+.form-group{margin-bottom:16px}
+.form-group label{display:block;font-size:12px;font-weight:500;color:var(--gray-600);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.5px}
+.form-group input{width:100%;border:1px solid var(--border);border-radius:8px;padding:10px 14px;font-size:14px;color:var(--text);background:var(--gray-50);outline:none;transition:border-color .15s}
+.form-group input:focus{border-color:var(--blue);background:white}
+.btn-login{width:100%;background:var(--navy);color:white;border:none;border-radius:8px;padding:12px;font-size:14px;font-weight:500;cursor:pointer;margin-top:8px;transition:background .15s}
+.btn-login:hover{background:var(--navy-light)}
+.login-error{color:var(--red);font-size:13px;margin-top:10px;display:none}
+
+/* HEADER */
+header{background:var(--navy-dark);color:white;padding:0 32px;display:flex;align-items:center;justify-content:space-between;height:60px;border-bottom:1px solid var(--navy-light)}
+.header-logo{display:flex;align-items:center;gap:10px}
+.header-logo-icon{width:32px;height:32px;background:var(--blue);border-radius:6px;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:14px}
+.header-logo-text{font-size:16px;font-weight:600}
+.header-logo-sub{font-size:11px;color:rgba(255,255,255,0.5);margin-left:4px}
+.header-right{display:flex;align-items:center;gap:20px}
+.header-empresa{font-size:13px;color:rgba(255,255,255,0.7);display:flex;align-items:center;gap:6px}
+.status-indicator{width:7px;height:7px;background:#22c55e;border-radius:50%;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+.header-clock{font-size:13px;color:rgba(255,255,255,0.5);font-variant-numeric:tabular-nums}
+.btn-refresh{background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);color:white;padding:6px 14px;border-radius:6px;font-size:13px;cursor:pointer;transition:background .15s}
+.btn-refresh:hover{background:rgba(255,255,255,0.2)}
+
+/* MAIN */
+main{padding:28px 32px;max-width:1400px;margin:0 auto;display:none}
+
+/* SECTION LABEL */
+.section-label{font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:14px;margin-top:28px}
+.section-label:first-child{margin-top:0}
+
+/* KPI GRID */
+.kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:4px}
+.kpi-card{background:white;border:1px solid var(--border);border-radius:10px;padding:20px 24px}
+.kpi-label{font-size:12px;font-weight:500;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px}
+.kpi-value{font-size:36px;font-weight:600;line-height:1;margin-bottom:6px}
+.kpi-value.blue{color:var(--navy)}
+.kpi-value.green{color:var(--green)}
+.kpi-value.red{color:var(--red)}
+.kpi-value.amber{color:var(--amber)}
+.kpi-sub{font-size:12px;color:var(--text-muted)}
+.kpi-bar{height:3px;background:var(--gray-200);border-radius:2px;margin-top:12px}
+.kpi-bar-fill{height:100%;background:var(--green);border-radius:2px;transition:width .6s}
+
+/* REPORT PANEL */
+.report-panel{background:white;border:1px solid var(--border);border-radius:10px;padding:20px 24px;margin-bottom:4px}
+.report-panel-title{font-size:14px;font-weight:600;color:var(--navy);margin-bottom:14px;display:flex;align-items:center;gap:8px}
+.report-controls{display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:12px;align-items:end}
+.ctrl-label{font-size:11px;font-weight:600;color:var(--gray-500);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:5px}
+.ctrl-input{width:100%;border:1px solid var(--border);border-radius:6px;padding:9px 12px;font-size:13px;color:var(--text);background:var(--gray-50);outline:none;transition:border-color .15s}
+.ctrl-input:focus{border-color:var(--blue);background:white}
+.btn-generate{background:var(--navy);color:white;border:none;border-radius:6px;padding:10px 20px;font-size:13px;font-weight:500;cursor:pointer;white-space:nowrap;transition:background .15s}
+.btn-generate:hover{background:var(--navy-light)}
+
+/* MAP */
+.map-panel{background:white;border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:4px}
+.map-header{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.map-title{font-size:14px;font-weight:600;color:var(--navy)}
+.map-update{font-size:12px;color:var(--text-muted)}
+#map{height:380px}
+
+/* GRID */
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:4px}
+
+/* PANEL */
+.panel{background:white;border:1px solid var(--border);border-radius:10px;overflow:hidden}
+.panel-header{padding:14px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.panel-title{font-size:13px;font-weight:600;color:var(--navy);display:flex;align-items:center;gap:8px}
+.panel-count{background:var(--gray-100);color:var(--gray-600);font-size:11px;font-weight:600;padding:2px 8px;border-radius:4px}
+.panel-count.green{background:var(--green-mid);color:var(--green)}
+.panel-count.red{background:var(--red-light);color:var(--red)}
+.panel-body{max-height:300px;overflow-y:auto}
+.panel-body::-webkit-scrollbar{width:3px}
+.panel-body::-webkit-scrollbar-thumb{background:var(--gray-200)}
+
+/* EMP ROWS */
+.emp-row{display:flex;align-items:center;padding:12px 20px;border-bottom:1px solid var(--gray-100);gap:12px;transition:background .1s}
+.emp-row:last-child{border-bottom:none}
+.emp-row:hover{background:var(--gray-50)}
+.emp-avatar{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:12px;flex-shrink:0}
+.emp-avatar.present{background:var(--green-mid);color:var(--green)}
+.emp-avatar.absent{background:var(--red-light);color:var(--red)}
+.emp-name{font-size:13px;font-weight:500;flex:1}
+.emp-time{font-size:12px;color:var(--text-muted)}
+.emp-badge{font-size:11px;font-weight:500;padding:3px 8px;border-radius:4px}
+.emp-badge.present{background:var(--green-mid);color:var(--green)}
+.emp-badge.absent{background:var(--red-light);color:var(--red)}
+
+/* ACTIVITY */
+.activity-item{display:flex;align-items:center;padding:11px 20px;border-bottom:1px solid var(--gray-100);gap:12px}
+.activity-item:last-child{border-bottom:none}
+.activity-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.activity-dot.entrada{background:var(--green)}
+.activity-dot.salida{background:var(--amber)}
+.activity-info{flex:1}
+.activity-name{font-size:13px;font-weight:500}
+.activity-detail{font-size:11px;color:var(--text-muted);margin-top:1px}
+.activity-time{font-size:12px;color:var(--text-muted)}
+.badge-late{font-size:10px;background:var(--red-light);color:var(--red);padding:1px 5px;border-radius:3px;margin-left:5px}
+.badge-geo{font-size:10px;background:var(--blue-mid);color:var(--blue);padding:1px 5px;border-radius:3px;margin-left:5px}
+
+/* EMPTY */
+.empty{padding:40px;text-align:center;color:var(--text-muted);font-size:13px}
+.loading{padding:40px;text-align:center;color:var(--text-muted);font-size:13px;display:flex;align-items:center;justify-content:center;gap:8px}
+.spinner{width:14px;height:14px;border:2px solid var(--border);border-top-color:var(--blue);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* TOAST */
+#toast{position:fixed;bottom:24px;right:24px;background:var(--navy);color:white;padding:10px 18px;border-radius:8px;font-size:13px;z-index:1000;transform:translateY(80px);opacity:0;transition:all .25s;box-shadow:0 4px 12px rgba(0,0,0,0.15)}
+#toast.show{transform:translateY(0);opacity:1}
+
+@media(max-width:768px){.kpi-grid{grid-template-columns:repeat(2,1fr)}.grid-2{grid-template-columns:1fr}.report-controls{grid-template-columns:1fr}main{padding:16px}}
 </style>
 </head>
 <body>
 
 <div id="login-screen">
   <div class="login-box">
-    <div class="login-logo">K</div>
-    <div class="login-title">Klokin</div>
+    <div class="login-logo">
+      <div class="login-logo-icon">K</div>
+      <div>
+        <div class="login-logo-text">Klokin</div>
+        <div class="login-logo-sub">Sistema de Asistencia</div>
+      </div>
+    </div>
+    <div class="login-title">Iniciar sesión</div>
     <div class="login-sub">Panel de Recursos Humanos</div>
-    <div class="form-group"><label>EMAIL</label><input type="email" id="login-email" placeholder="admin@acimco.com" value="admin@acimco.com"></div>
-    <div class="form-group"><label>CONTRASEÑA</label><input type="password" id="login-pass" placeholder="••••••••" value="Acimco2026!"></div>
-    <button class="btn-login" onclick="doLogin()">Ingresar</button>
-    <div class="login-error" id="login-error">Email o contraseña incorrectos</div>
+    <div class="form-group"><label>Correo electrónico</label><input type="email" id="login-email" placeholder="admin@acimco.com" value="admin@acimco.com"></div>
+    <div class="form-group"><label>Contraseña</label><input type="password" id="login-pass" placeholder="••••••••" value="Acimco2026!"></div>
+    <button class="btn-login" onclick="doLogin()">Ingresar al sistema</button>
+    <div class="login-error" id="login-error">Credenciales incorrectas. Intenta de nuevo.</div>
   </div>
 </div>
 
 <header>
-  <div class="logo">
-    <div class="logo-icon">K</div>
-    <div><div class="logo-text">Klokin</div><div class="logo-sub">RRHH Dashboard</div></div>
+  <div class="header-logo">
+    <div class="header-logo-icon">K</div>
+    <div>
+      <span class="header-logo-text">Klokin</span>
+      <span class="header-logo-sub">Panel RRHH</span>
+    </div>
   </div>
   <div class="header-right">
-    <div class="status-dot"></div>
-    <div class="empresa-badge" id="empresa-name">Cargando...</div>
-    <div class="timestamp" id="clock">--:--</div>
-    <button class="btn-refresh" onclick="loadAll()">↻ Actualizar</button>
+    <div class="header-empresa"><div class="status-indicator"></div><span id="empresa-name">Cargando...</span></div>
+    <div class="header-clock" id="clock">--:--:--</div>
+    <button class="btn-refresh" onclick="loadAll()">Actualizar</button>
   </div>
 </header>
 
-<main id="main-content" style="display:none">
-  <div class="section-title">Reportes</div>
-  <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:24px;margin-bottom:32px">
-    <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:15px;margin-bottom:4px">📋 Generar Reporte de Asistencia</div>
-    <div style="font-size:12px;color:var(--text-dim);margin-bottom:20px">Nombre, hora entrada/salida, ubicación y horas trabajadas por día</div>
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:12px;align-items:end;flex-wrap:wrap">
-      <div>
-        <label style="display:block;font-family:'DM Mono',monospace;font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">DESDE</label>
-        <input type="date" id="reporte-desde" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 12px;color:var(--text);font-family:'DM Mono',monospace;font-size:12px;outline:none">
-      </div>
-      <div>
-        <label style="display:block;font-family:'DM Mono',monospace;font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">HASTA</label>
-        <input type="date" id="reporte-hasta" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 12px;color:var(--text);font-family:'DM Mono',monospace;font-size:12px;outline:none">
-      </div>
-      <div>
-        <label style="display:block;font-family:'DM Mono',monospace;font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">FORMATO</label>
-        <select id="reporte-formato" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 12px;color:var(--text);font-family:'DM Mono',monospace;font-size:12px;outline:none;cursor:pointer">
-          <option value="pdf">📄 PDF</option>
-          <option value="excel">📊 Excel</option>
-        </select>
-      </div>
-      <button onclick="generarReporte()" style="background:var(--green);color:#0a0f0d;border:none;border-radius:8px;padding:11px 24px;font-family:'Syne',sans-serif;font-weight:700;font-size:13px;cursor:pointer;white-space:nowrap">⬇ Generar</button>
+<main id="main-content">
+  <div class="section-label">Resumen del día</div>
+  <div class="kpi-grid">
+    <div class="kpi-card"><div class="kpi-label">Total empleados</div><div class="kpi-value blue" id="kpi-total">—</div><div class="kpi-sub">registrados en el sistema</div></div>
+    <div class="kpi-card"><div class="kpi-label">Presentes ahora</div><div class="kpi-value green" id="kpi-presentes">—</div><div class="kpi-sub" id="kpi-pct">% de asistencia</div><div class="kpi-bar"><div class="kpi-bar-fill" id="kpi-bar" style="width:0%"></div></div></div>
+    <div class="kpi-card"><div class="kpi-label">Ausentes</div><div class="kpi-value red" id="kpi-ausentes">—</div><div class="kpi-sub">sin marcar entrada</div></div>
+    <div class="kpi-card"><div class="kpi-label">Tardanzas hoy</div><div class="kpi-value amber" id="kpi-tardanzas">—</div><div class="kpi-sub">llegaron tarde</div></div>
+  </div>
+
+  <div class="section-label">Generar reporte</div>
+  <div class="report-panel">
+    <div class="report-panel-title">Reporte de asistencia por rango de fechas</div>
+    <div class="report-controls">
+      <div><div class="ctrl-label">Desde</div><input type="date" id="reporte-desde" class="ctrl-input"></div>
+      <div><div class="ctrl-label">Hasta</div><input type="date" id="reporte-hasta" class="ctrl-input"></div>
+      <div><div class="ctrl-label">Formato</div><select id="reporte-formato" class="ctrl-input"><option value="pdf">PDF (imprimir)</option><option value="excel">Excel / CSV</option></select></div>
+      <button class="btn-generate" onclick="generarReporte()">Generar reporte</button>
     </div>
   </div>
 
-  <div class="section-title">Resumen del día</div>
-  <div class="kpi-grid">
-    <div class="kpi-card"><div class="kpi-label">Total Empleados</div><div class="kpi-value white" id="kpi-total">—</div><div class="kpi-sub">activos en el sistema</div></div>
-    <div class="kpi-card"><div class="kpi-label">Presentes Ahora</div><div class="kpi-value green" id="kpi-presentes">—</div><div class="kpi-sub" id="kpi-pct">% de asistencia</div><div class="progress-bar"><div class="progress-fill" id="progress-fill" style="width:0%"></div></div></div>
-    <div class="kpi-card"><div class="kpi-label">Ausentes</div><div class="kpi-value red" id="kpi-ausentes">—</div><div class="kpi-sub">no han marcado entrada</div></div>
-    <div class="kpi-card"><div class="kpi-label">Tardanzas Hoy</div><div class="kpi-value amber" id="kpi-tardanzas">—</div><div class="kpi-sub">llegaron tarde</div></div>
-  </div>
-
-  <div class="section-title">Mapa de ubicaciones</div>
-  <div class="panel" style="margin-bottom:16px">
-    <div class="panel-header">
-      <div class="panel-title">📍 Ubicaciones en tiempo real</div>
-      <div class="timestamp" id="map-update">—</div>
+  <div class="section-label">Ubicaciones en tiempo real</div>
+  <div class="map-panel">
+    <div class="map-header">
+      <div class="map-title">Mapa de asistencia</div>
+      <div class="map-update" id="map-update">—</div>
     </div>
     <div id="map"></div>
   </div>
 
-  <div class="section-title">Estado en tiempo real</div>
+  <div class="section-label">Estado del equipo</div>
   <div class="grid-2">
     <div class="panel">
-      <div class="panel-header"><div class="panel-title">🟢 Presentes <span class="panel-badge" id="badge-presentes">0</span></div></div>
+      <div class="panel-header">
+        <div class="panel-title">Presentes <span class="panel-count green" id="badge-presentes">0</span></div>
+      </div>
       <div class="panel-body" id="list-presentes"><div class="loading"><div class="spinner"></div> Cargando...</div></div>
     </div>
     <div class="panel">
-      <div class="panel-header"><div class="panel-title">🔴 Ausentes <span class="panel-badge" id="badge-ausentes">0</span></div></div>
+      <div class="panel-header">
+        <div class="panel-title">Ausentes <span class="panel-count red" id="badge-ausentes">0</span></div>
+      </div>
       <div class="panel-body" id="list-ausentes"><div class="loading"><div class="spinner"></div> Cargando...</div></div>
     </div>
   </div>
 
-  <div class="section-title">Actividad de hoy</div>
-  <div class="panel" style="margin-bottom:16px">
+  <div class="section-label">Actividad del día</div>
+  <div class="panel" style="margin-bottom:32px">
     <div class="panel-header">
-      <div class="panel-title">⚡ Últimas marcaciones <span class="panel-badge" id="badge-actividad">0</span></div>
-      <div class="timestamp" id="last-update">—</div>
+      <div class="panel-title">Últimas marcaciones <span class="panel-count" id="badge-actividad">0</span></div>
+      <div style="font-size:12px;color:var(--text-muted)" id="last-update">—</div>
     </div>
     <div class="panel-body" id="list-actividad"><div class="loading"><div class="spinner"></div> Cargando...</div></div>
   </div>
@@ -205,8 +242,7 @@ let TOKEN = localStorage.getItem('klokin_token');
 let map, markers = [], routeLines = [];
 
 function updateClock() {
-  const now = new Date();
-  document.getElementById('clock').textContent = now.toLocaleTimeString('es-EC',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  document.getElementById('clock').textContent = new Date().toLocaleTimeString('es-EC',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
 }
 setInterval(updateClock, 1000);
 updateClock();
@@ -219,40 +255,37 @@ function showToast(msg) {
 }
 
 function initMap() {
-  map = L.map('map').setView([-0.2295, -78.5243], 12); // Quito por defecto
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '© OpenStreetMap',
-    maxZoom: 19
-  }).addTo(map);
+  map = L.map('map').setView([-0.2295,-78.5243],12);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap',maxZoom:19}).addTo(map);
 }
 
-function initials(name) { return name.split(' ').slice(0,2).map(w=>w[0]).join('').toUpperCase(); }
-function fmtTime(ts) { if (!ts) return '—'; return new Date(ts).toLocaleTimeString('es-EC',{hour:'2-digit',minute:'2-digit'}); }
+function initials(n) { return n.split(' ').slice(0,2).map(w=>w[0]).join('').toUpperCase(); }
+function fmtTime(ts) { if(!ts) return '—'; return new Date(ts).toLocaleTimeString('es-EC',{hour:'2-digit',minute:'2-digit'}); }
 
 async function doLogin() {
   const email = document.getElementById('login-email').value;
   const pass = document.getElementById('login-pass').value;
   const err = document.getElementById('login-error');
   try {
-    const res = await fetch(`${API}/auth/login`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({email, password:pass}) });
+    const res = await fetch(`${API}/auth/login`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,password:pass})});
     const data = await res.json();
     if (data.ok) {
       TOKEN = data.token;
-      localStorage.setItem('klokin_token', TOKEN);
+      localStorage.setItem('klokin_token',TOKEN);
       document.getElementById('empresa-name').textContent = data.usuario.empresa.nombre;
       document.getElementById('login-screen').style.display = 'none';
       document.getElementById('main-content').style.display = 'block';
       initMap();
       loadAll();
-      setInterval(loadAll, 30000);
-    } else { err.style.display = 'block'; }
-  } catch(e) { err.style.display = 'block'; err.textContent = 'Error de conexión'; }
+      setInterval(loadAll,30000);
+    } else { err.style.display='block'; }
+  } catch(e) { err.style.display='block'; err.textContent='Error de conexión'; }
 }
 
 async function checkToken() {
-  if (!TOKEN) return;
+  if(!TOKEN) return;
   try {
-    const res = await fetch(`${API}/auth/me`, {headers:{'Authorization':`Bearer ${TOKEN}`}});
+    const res = await fetch(`${API}/auth/me`,{headers:{'Authorization':`Bearer ${TOKEN}`}});
     const data = await res.json();
     if (data.ok) {
       document.getElementById('empresa-name').textContent = data.usuario.empresa.nombre;
@@ -260,328 +293,206 @@ async function checkToken() {
       document.getElementById('main-content').style.display = 'block';
       initMap();
       loadAll();
-      setInterval(loadAll, 30000);
-    } else { localStorage.removeItem('klokin_token'); TOKEN = null; }
+      setInterval(loadAll,30000);
+    } else { localStorage.removeItem('klokin_token'); TOKEN=null; }
   } catch(e) {}
 }
 
 async function loadAll() {
   await Promise.all([loadDashboard(), loadMarcaciones()]);
   const now = new Date().toLocaleTimeString('es-EC',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
-  document.getElementById('last-update').textContent = 'Actualizado: ' + now;
-  document.getElementById('map-update').textContent = 'Actualizado: ' + now;
-  showToast('✓ Datos actualizados');
+  document.getElementById('last-update').textContent = 'Actualizado: '+now;
+  document.getElementById('map-update').textContent = 'Actualizado: '+now;
 }
 
 async function loadDashboard() {
   try {
-    const res = await fetch(`${API}/dashboard`, {headers:{'Authorization':`Bearer ${TOKEN}`}});
+    const res = await fetch(`${API}/dashboard`,{headers:{'Authorization':`Bearer ${TOKEN}`}});
     const data = await res.json();
-    if (!data.ok) return;
+    if(!data.ok) return;
     const k = data.kpis;
     document.getElementById('kpi-total').textContent = k.totalEmpleados;
     document.getElementById('kpi-presentes').textContent = k.presentes;
     document.getElementById('kpi-ausentes').textContent = k.ausentes;
     document.getElementById('kpi-tardanzas').textContent = k.tardanzasHoy;
-    document.getElementById('kpi-pct').textContent = k.porcentajeAsistencia + '% de asistencia';
-    document.getElementById('progress-fill').style.width = k.porcentajeAsistencia + '%';
+    document.getElementById('kpi-pct').textContent = k.porcentajeAsistencia+'% de asistencia';
+    document.getElementById('kpi-bar').style.width = k.porcentajeAsistencia+'%';
 
-    const presentes = data.presentes || [];
-    const ausentes = data.ausentes || [];
+    const presentes = data.presentes||[];
+    const ausentes = data.ausentes||[];
     document.getElementById('badge-presentes').textContent = presentes.length;
     document.getElementById('badge-ausentes').textContent = ausentes.length;
 
-    // Actualizar mapa con marcaciones de hoy que tienen ubicación
-    if (map) {
-      markers.forEach(m => map.removeLayer(m));
-      markers = [];
-    }
+    document.getElementById('list-presentes').innerHTML = presentes.length===0
+      ? '<div class="empty">Sin empleados presentes</div>'
+      : presentes.map(e=>`<div class="emp-row"><div class="emp-avatar present">${initials((e.nombre||'?')+' '+(e.apellido||''))}</div><div class="emp-info" style="flex:1"><div class="emp-name">${e.nombre||''} ${e.apellido||''}</div><div class="emp-time">Entrada: ${fmtTime(e.ultima_entrada)}</div></div><span class="emp-badge present">Presente</span></div>`).join('');
 
-    const listP = document.getElementById('list-presentes');
-    listP.innerHTML = presentes.length === 0 ? '<div class="empty">Sin empleados presentes</div>' :
-      presentes.map(e => `<div class="emp-row"><div class="emp-avatar present">${initials((e.nombre||'?')+' '+(e.apellido||''))}</div><div class="emp-info"><div class="emp-name">${e.nombre||''} ${e.apellido||''}</div><div class="emp-meta">Entrada: ${fmtTime(e.ultima_entrada)}</div></div><div class="emp-status present">PRESENTE</div></div>`).join('');
-
-    const listA = document.getElementById('list-ausentes');
-    listA.innerHTML = ausentes.length === 0 ? '<div class="empty">Todos han marcado entrada 🎉</div>' :
-      ausentes.map(e => `<div class="emp-row"><div class="emp-avatar absent">${initials((e.nombre||'?')+' '+(e.apellido||''))}</div><div class="emp-info"><div class="emp-name">${e.nombre||''} ${e.apellido||''}</div></div><div class="emp-status absent">AUSENTE</div></div>`).join('');
-  } catch(e) { console.error('Error dashboard:', e); }
+    document.getElementById('list-ausentes').innerHTML = ausentes.length===0
+      ? '<div class="empty">Todos han marcado entrada</div>'
+      : ausentes.map(e=>`<div class="emp-row"><div class="emp-avatar absent">${initials((e.nombre||'?')+' '+(e.apellido||''))}</div><div class="emp-info" style="flex:1"><div class="emp-name">${e.nombre||''} ${e.apellido||''}</div></div><span class="emp-badge absent">Ausente</span></div>`).join('');
+  } catch(e) { console.error('Error dashboard:',e); }
 }
 
 async function loadMarcaciones() {
   try {
-    const res = await fetch(`${API}/marcaciones/hoy`, {headers:{'Authorization':`Bearer ${TOKEN}`}});
+    const res = await fetch(`${API}/marcaciones/hoy`,{headers:{'Authorization':`Bearer ${TOKEN}`}});
     const data = await res.json();
-    if (!data.ok) return;
-    const marcaciones = data.marcacionesHoy || [];
+    if(!data.ok) return;
+    const marcaciones = data.marcacionesHoy||[];
     document.getElementById('badge-actividad').textContent = marcaciones.length;
-    const list = document.getElementById('list-actividad');
-    list.innerHTML = marcaciones.length === 0 ? '<div class="empty">Sin actividad registrada hoy</div>' :
-      marcaciones.slice(0,20).map(m => `<div class="activity-item"><div class="activity-dot ${m.tipo.toLowerCase()}"></div><div class="activity-info"><div class="activity-name">${m.nombre} ${m.apellido}${m.es_extemporanea?`<span class="late-badge">+${m.minutos_retraso}min</span>`:''}${(m.latitud&&m.longitud)?'<span class="geo-badge">📍 ubicación</span>':''}</div><div class="activity-detail">${m.tipo} · ${m.tipo_contrato}</div></div><div class="activity-time">${fmtTime(m.timestamp)}</div></div>`).join('');
+    document.getElementById('list-actividad').innerHTML = marcaciones.length===0
+      ? '<div class="empty">Sin actividad registrada hoy</div>'
+      : marcaciones.slice(0,20).map(m=>`<div class="activity-item"><div class="activity-dot ${m.tipo.toLowerCase()}"></div><div class="activity-info"><div class="activity-name">${m.nombre} ${m.apellido}${m.es_extemporanea?`<span class="badge-late">+${m.minutos_retraso}min</span>`:''}${(m.latitud&&m.longitud)?'<span class="badge-geo">Ubicación</span>':''}</div><div class="activity-detail">${m.tipo}</div></div><div class="activity-time">${fmtTime(m.timestamp)}</div></div>`).join('');
 
-    // Actualizar mapa con ubicaciones y rutas
-    if (map) {
-      markers.forEach(m => map.removeLayer(m));
-      routeLines.forEach(l => map.removeLayer(l));
-      markers = [];
-      routeLines = [];
-      const bounds = [];
-
-      // Obtener puntos de ruta de hoy
-      let puntosRuta = [];
+    if(map) {
+      markers.forEach(m=>map.removeLayer(m));
+      routeLines.forEach(l=>map.removeLayer(l));
+      markers=[];routeLines=[];
+      const bounds=[];
+      let puntosRuta=[];
       try {
-        const rutaRes = await fetch(`${API}/puntos-ruta/hoy`, {headers:{'Authorization':`Bearer ${TOKEN}`}});
-        const rutaData = await rutaRes.json();
-        if (rutaData.ok) puntosRuta = rutaData.puntos || [];
-      } catch(e) {}
+        const rr = await fetch(`${API}/puntos-ruta/hoy`,{headers:{'Authorization':`Bearer ${TOKEN}`}});
+        const rd = await rr.json();
+        if(rd.ok) puntosRuta=rd.puntos||[];
+      } catch(e){}
 
-      // Agrupar puntos por empleado
-      const porEmpleado = {};
-      marcaciones.filter(m => m.latitud && m.longitud).forEach(m => {
-        const nombre = `${m.nombre} ${m.apellido}`;
-        if (!porEmpleado[nombre]) porEmpleado[nombre] = [];
-        porEmpleado[nombre].push({ lat: parseFloat(m.latitud), lon: parseFloat(m.longitud), tipo: m.tipo, hora: m.timestamp });
+      const porEmpleado={};
+      marcaciones.filter(m=>m.latitud&&m.longitud).forEach(m=>{
+        const n=`${m.nombre} ${m.apellido}`;
+        if(!porEmpleado[n]) porEmpleado[n]=[];
+        porEmpleado[n].push({lat:parseFloat(m.latitud),lon:parseFloat(m.longitud),tipo:m.tipo,hora:m.timestamp});
       });
-      puntosRuta.filter(p => p.latitud && p.longitud).forEach(p => {
-        const nombre = `${p.nombre} ${p.apellido}`;
-        if (!porEmpleado[nombre]) porEmpleado[nombre] = [];
-        porEmpleado[nombre].push({ lat: parseFloat(p.latitud), lon: parseFloat(p.longitud), tipo: 'PARADA', hora: p.timestamp });
+      puntosRuta.filter(p=>p.latitud&&p.longitud).forEach(p=>{
+        const n=`${p.nombre} ${p.apellido}`;
+        if(!porEmpleado[n]) porEmpleado[n]=[];
+        porEmpleado[n].push({lat:parseFloat(p.latitud),lon:parseFloat(p.longitud),tipo:'PARADA',hora:p.timestamp});
       });
 
-      // Colores por empleado
-      const colores = ['#22c55e','#3b82f6','#f59e0b','#ec4899','#8b5cf6','#06b6d4'];
-      let colorIdx = 0;
-
-      Object.entries(porEmpleado).forEach(([nombre, puntos]) => {
-        const color = colores[colorIdx % colores.length];
-        colorIdx++;
-        puntos.sort((a,b) => new Date(a.hora) - new Date(b.hora));
-
-        // Dibujar línea de ruta
-        if (puntos.length > 1) {
-          const latlngs = puntos.map(p => [p.lat, p.lon]);
-          const line = L.polyline(latlngs, {color, weight:3, opacity:0.7, dashArray: '6,4'}).addTo(map);
+      const cols=['#2563eb','#16a34a','#d97706','#9333ea','#dc2626','#0891b2'];
+      let ci=0;
+      Object.entries(porEmpleado).forEach(([nombre,puntos])=>{
+        const col=cols[ci%cols.length];ci++;
+        puntos.sort((a,b)=>new Date(a.hora)-new Date(b.hora));
+        if(puntos.length>1){
+          const line=L.polyline(puntos.map(p=>[p.lat,p.lon]),{color:col,weight:2,opacity:0.7,dashArray:'5,4'}).addTo(map);
           routeLines.push(line);
         }
-
-        // Dibujar pins
-        puntos.forEach((p, idx) => {
-          const esEntrada = p.tipo === 'ENTRADA';
-          const esSalida = p.tipo === 'SALIDA';
-          const esParada = p.tipo === 'PARADA';
-          const bgColor = esEntrada ? color : esSalida ? '#ef4444' : '#fff';
-          const textColor = esEntrada || esSalida ? '#fff' : color;
-          const label = esEntrada ? initials(nombre) : esSalida ? '🏁' : `${idx}`;
-          const size = esParada ? 24 : 32;
-
-          const icon = L.divIcon({
-            className: '',
-            html: `<div style="background:${bgColor};color:${textColor};width:${size}px;height:${size}px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:${esParada?10:11}px;border:2px solid ${color};box-shadow:0 2px 8px rgba(0,0,0,0.3)">${label}</div>`,
-            iconSize: [size, size], iconAnchor: [size/2, size/2]
-          });
-          const tipoLabel = esEntrada ? 'Entrada' : esSalida ? 'Salida' : `Parada ${idx}`;
-          const marker = L.marker([p.lat, p.lon], {icon})
-            .addTo(map)
-            .bindPopup(`<b>${nombre}</b><br>${tipoLabel}: ${fmtTime(p.hora)}<br>📍 ${p.lat.toFixed(5)}, ${p.lon.toFixed(5)}`);
-          markers.push(marker);
-          bounds.push([p.lat, p.lon]);
+        puntos.forEach((p,i)=>{
+          const label=p.tipo==='ENTRADA'?initials(nombre):p.tipo==='SALIDA'?'F':`${i}`;
+          const bg=p.tipo==='ENTRADA'?col:p.tipo==='SALIDA'?'#dc2626':'white';
+          const tc=p.tipo==='PARADA'?col:'white';
+          const sz=p.tipo==='PARADA'?22:30;
+          const icon=L.divIcon({className:'',html:`<div style="background:${bg};color:${tc};width:${sz}px;height:${sz}px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:${p.tipo==='PARADA'?9:11}px;border:2px solid ${col};box-shadow:0 1px 4px rgba(0,0,0,0.2)">${label}</div>`,iconSize:[sz,sz],iconAnchor:[sz/2,sz/2]});
+          const mk=L.marker([p.lat,p.lon],{icon}).addTo(map).bindPopup(`<b>${nombre}</b><br>${p.tipo}: ${fmtTime(p.hora)}`);
+          markers.push(mk);bounds.push([p.lat,p.lon]);
         });
       });
-
-      if (bounds.length > 0) map.fitBounds(bounds, {padding:[40,40]});
+      if(bounds.length>0) map.fitBounds(bounds,{padding:[40,40]});
     }
-  } catch(e) { console.error('Error marcaciones:', e); }
+  } catch(e){console.error('Error marcaciones:',e);}
 }
 
-// Set default dates
-document.addEventListener('DOMContentLoaded', () => {
-  const now = new Date();
-  const hoy = now.toISOString().slice(0,10);
-  const primerDiaMes = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0,10);
-  const desdeInput = document.getElementById('reporte-desde');
-  const hastaInput = document.getElementById('reporte-hasta');
-  if (desdeInput) desdeInput.value = primerDiaMes;
-  if (hastaInput) hastaInput.value = hoy;
+document.addEventListener('DOMContentLoaded',()=>{
+  const now=new Date();
+  const hoy=now.toISOString().slice(0,10);
+  const primer=new Date(now.getFullYear(),now.getMonth(),1).toISOString().slice(0,10);
+  const d=document.getElementById('reporte-desde');
+  const h=document.getElementById('reporte-hasta');
+  if(d) d.value=primer;
+  if(h) h.value=hoy;
 });
 
 async function generarReporte() {
-  const desde = document.getElementById('reporte-desde').value;
-  const hasta = document.getElementById('reporte-hasta').value;
-  const formato = document.getElementById('reporte-formato').value;
-  if (!desde || !hasta) { alert('Selecciona fechas de inicio y fin'); return; }
-  if (desde > hasta) { alert('La fecha de inicio debe ser anterior a la fecha fin'); return; }
-
-  showToast('⏳ Generando reporte...');
-
+  const desde=document.getElementById('reporte-desde').value;
+  const hasta=document.getElementById('reporte-hasta').value;
+  const formato=document.getElementById('reporte-formato').value;
+  if(!desde||!hasta){alert('Selecciona las fechas');return;}
+  if(desde>hasta){alert('La fecha de inicio debe ser anterior a la fecha fin');return;}
+  showToast('Generando reporte...');
   try {
-    // Obtener marcaciones del rango
-    const res = await fetch(`${API}/marcaciones?desde=${desde}&hasta=${hasta}&limit=500`, {
-      headers: {'Authorization': `Bearer ${TOKEN}`}
+    const res=await fetch(`${API}/marcaciones?desde=${desde}&hasta=${hasta}&limit=500`,{headers:{'Authorization':`Bearer ${TOKEN}`}});
+    const data=await res.json();
+    if(!data.ok){showToast('Error obteniendo datos');return;}
+    const marcaciones=data.marcaciones||[];
+    const empresa=document.getElementById('empresa-name').textContent;
+    const grupos={};
+    marcaciones.forEach(m=>{
+      const dia=new Date(m.timestamp).toLocaleDateString('es-EC',{timeZone:'America/Guayaquil'});
+      const key=`${m.nombre} ${m.apellido}||${dia}`;
+      if(!grupos[key]) grupos[key]={nombre:`${m.nombre} ${m.apellido}`,dia,entradas:[],salidas:[],geos:[]};
+      if(m.tipo==='ENTRADA'){
+        grupos[key].entradas.push({hora:m.timestamp,str:new Date(m.timestamp).toLocaleTimeString('es-EC',{timeZone:'America/Guayaquil',hour:'2-digit',minute:'2-digit'})});
+        if(m.latitud&&m.longitud) grupos[key].geos.push(`${parseFloat(m.latitud).toFixed(5)}, ${parseFloat(m.longitud).toFixed(5)}`);
+      }
+      if(m.tipo==='SALIDA') grupos[key].salidas.push({hora:m.timestamp,str:new Date(m.timestamp).toLocaleTimeString('es-EC',{timeZone:'America/Guayaquil',hour:'2-digit',minute:'2-digit'})});
     });
-    const data = await res.json();
-    if (!data.ok) { showToast('❌ Error obteniendo datos'); return; }
-
-    const marcaciones = data.marcaciones || [];
-    const empresa = document.getElementById('empresa-name').textContent;
-
-    // Agrupar por empleado y día
-    const grupos = {};
-    marcaciones.forEach(m => {
-      const dia = new Date(m.timestamp).toLocaleDateString('es-EC', {timeZone:'America/Guayaquil'});
-      const key = `${m.nombre} ${m.apellido}||${dia}`;
-      if (!grupos[key]) grupos[key] = { nombre: `${m.nombre} ${m.apellido}`, dia, entradas: [], salidas: [], geos: [] };
-      if (m.tipo === 'ENTRADA') {
-        grupos[key].entradas.push({hora: m.timestamp, str: new Date(m.timestamp).toLocaleTimeString('es-EC',{timeZone:'America/Guayaquil',hour:'2-digit',minute:'2-digit'})});
-        if (m.latitud && m.longitud) grupos[key].geos.push(`${parseFloat(m.latitud).toFixed(5)}, ${parseFloat(m.longitud).toFixed(5)}`);
-      }
-      if (m.tipo === 'SALIDA') {
-        grupos[key].salidas.push({hora: m.timestamp, str: new Date(m.timestamp).toLocaleTimeString('es-EC',{timeZone:'America/Guayaquil',hour:'2-digit',minute:'2-digit'})});
-      }
+    const filas=Object.values(grupos).map(g=>{
+      const e0=g.entradas[0]?.hora||null,s0=g.salidas[g.salidas.length-1]?.hora||null;
+      let horas='—',mins=0;
+      if(e0&&s0){const d=Math.round((new Date(s0)-new Date(e0))/60000);if(d>0){horas=`${Math.floor(d/60)}h ${d%60}min`;mins=d;}}
+      return{nombre:g.nombre,dia:g.dia,entrada:g.entradas[0]?.str||'—',salida:g.salidas[g.salidas.length-1]?.str||'—',ubicacion:g.geos[0]||'—',horas,mins};
+    }).sort((a,b)=>a.nombre.localeCompare(b.nombre)||a.dia.localeCompare(b.dia));
+    const res2={};
+    filas.forEach(f=>{
+      if(!res2[f.nombre]) res2[f.nombre]={nombre:f.nombre,dias:0,totalMins:0,tardanzas:0,extras:0};
+      res2[f.nombre].dias++;
+      if(f.mins>0){res2[f.nombre].totalMins+=f.mins;if(f.mins>480)res2[f.nombre].extras+=f.mins-480;}
     });
-
-    // Calcular horas trabajadas usando timestamps reales
-    const filas = Object.values(grupos).map(g => {
-      const entrada = g.entradas[0]?.hora || null;
-      const salida = g.salidas[g.salidas.length-1]?.hora || null;
-      const entradaStr = g.entradas[0]?.str || '—';
-      const salidaStr = g.salidas[g.salidas.length-1]?.str || '—';
-      let horas = '—';
-      let minutosTotales = 0;
-      if (entrada && salida) {
-        const diffMin = Math.round((new Date(salida) - new Date(entrada)) / 60000);
-        if (diffMin > 0) { horas = `${Math.floor(diffMin/60)}h ${diffMin%60}min`; minutosTotales = diffMin; }
-      }
-      return { nombre: g.nombre, dia: g.dia, entrada: entradaStr, salida: salidaStr, ubicacion: g.geos[0] || '—', horas, minutosTotales };
-    }).sort((a,b) => a.nombre.localeCompare(b.nombre) || a.dia.localeCompare(b.dia));
-
-    // Calcular resumen consolidado por empleado
-    const resumen = {};
-    filas.forEach(f => {
-      if (!resumen[f.nombre]) resumen[f.nombre] = { nombre: f.nombre, diasTrabajados: 0, totalMinutos: 0, tardanzas: 0, horasExtras: 0 };
-      resumen[f.nombre].diasTrabajados++;
-      if (f.minutosTotales > 0) {
-        resumen[f.nombre].totalMinutos += f.minutosTotales;
-        if (f.minutosTotales > 480) resumen[f.nombre].horasExtras += f.minutosTotales - 480;
-      }
-    });
-    marcaciones.forEach(m => {
-      if (m.es_extemporanea && m.tipo === 'ENTRADA') {
-        const nombre = `${m.nombre} ${m.apellido}`;
-        if (resumen[nombre]) resumen[nombre].tardanzas++;
-      }
-    });
-    const resumenFilas = Object.values(resumen);
-
-    if (formato === 'pdf') {
-      generarPDF(filas, resumenFilas, empresa, desde, hasta);
-    } else {
-      generarExcelCustom(filas, resumenFilas, empresa, desde, hasta);
-    }
-
-  } catch(e) {
-    showToast('❌ Error: ' + e.message);
-    console.error(e);
-  }
-}
-
-function fmtMinutos(mins) {
-  if (!mins) return '0h 0min';
-  return `${Math.floor(mins/60)}h ${mins%60}min`;
-}
-
-function generarPDF(filas, resumen, empresa, desde, hasta) {
-  const html = `<!DOCTYPE html>
-<html><head><meta charset="UTF-8"><title>Reporte Klokin</title>
-<style>
-  body { font-family: Arial, sans-serif; margin: 30px; color: #333; font-size: 11px; }
-  h1 { color: #1a2e1e; border-bottom: 3px solid #22c55e; padding-bottom: 8px; font-size: 16px; margin-bottom: 4px; }
-  h2 { color: #166534; font-size: 13px; margin: 20px 0 8px; border-left: 3px solid #22c55e; padding-left: 8px; }
-  .meta { color: #666; margin: 4px 0 16px; font-size: 10px; }
-  table { width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 11px; }
-  th { background: #1a2e1e; color: white; padding: 7px 8px; text-align: left; font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; }
-  td { padding: 6px 8px; border-bottom: 1px solid #e5e7eb; }
-  tr:nth-child(even) { background: #f9fdf9; }
-  tr:hover { background: #f0faf2; }
-  .num { text-align: center; }
-  .bold { font-weight: bold; }
-  .green { color: #166534; font-weight: bold; }
-  .amber { color: #92400e; }
-  .footer { margin-top: 20px; font-size: 9px; color: #999; text-align: center; border-top: 1px solid #e5e7eb; padding-top: 8px; }
-  .page-break { page-break-before: always; }
-  @media print { body { margin: 12px; } }
+    marcaciones.forEach(m=>{if(m.es_extemporanea&&m.tipo==='ENTRADA'){const n=`${m.nombre} ${m.apellido}`;if(res2[n])res2[n].tardanzas++;}});
+    const resFilas=Object.values(res2);
+    const fmtM=m=>m?`${Math.floor(m/60)}h ${m%60}min`:'0h 0min';
+    if(formato==='pdf'){
+      const html=`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Reporte Klokin</title><style>
+body{font-family:Arial,sans-serif;margin:28px;color:#1e293b;font-size:11px}
+h1{color:#1e2d3d;font-size:16px;font-weight:600;border-bottom:2px solid #2563eb;padding-bottom:8px;margin-bottom:4px}
+h2{color:#1e2d3d;font-size:13px;font-weight:600;margin:20px 0 8px;border-left:3px solid #2563eb;padding-left:8px}
+.meta{color:#64748b;font-size:10px;margin:4px 0 16px}
+table{width:100%;border-collapse:collapse;margin-bottom:20px}
+th{background:#1e2d3d;color:white;padding:7px 10px;text-align:left;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:0.5px}
+td{padding:6px 10px;border-bottom:1px solid #e2e8f0;font-size:11px}
+tr:nth-child(even){background:#f8fafc}
+.num{text-align:right}
+.green{color:#16a34a;font-weight:500}
+.amber{color:#d97706}
+.total-row{background:#1e2d3d!important;color:white;font-weight:600}
+.total-row td{color:white}
+.footer{margin-top:20px;font-size:9px;color:#94a3b8;text-align:center;border-top:1px solid #e2e8f0;padding-top:8px}
+.page-break{page-break-before:always;margin-top:20px}
+@media print{body{margin:14px}.page-break{page-break-before:always}}
 </style></head><body>
-<h1>🟢 Klokin — Reporte de Asistencia</h1>
-<div class="meta"><strong>Empresa:</strong> ${empresa} &nbsp;|&nbsp; <strong>Período:</strong> ${desde} al ${hasta} &nbsp;|&nbsp; <strong>Generado:</strong> ${new Date().toLocaleString('es-EC',{timeZone:'America/Guayaquil'})} &nbsp;|&nbsp; <strong>Empleados:</strong> ${resumen.length}</div>
-
-<h2>📊 Resumen por Empleado</h2>
-<table>
-  <thead><tr><th>Empleado</th><th class="num">Días Trabajados</th><th class="num">Total Horas</th><th class="num">Horas Extras</th><th class="num">Tardanzas</th></tr></thead>
-  <tbody>
-    ${resumen.map(r => `<tr>
-      <td class="bold">${r.nombre}</td>
-      <td class="num">${r.diasTrabajados}</td>
-      <td class="num green">${fmtMinutos(r.totalMinutos)}</td>
-      <td class="num">${fmtMinutos(r.horasExtras)}</td>
-      <td class="num ${r.tardanzas > 0 ? 'amber' : ''}">${r.tardanzas}</td>
-    </tr>`).join('')}
-    <tr style="background:#1a2e1e;color:white;font-weight:bold">
-      <td>TOTAL</td>
-      <td class="num">${resumen.reduce((s,r)=>s+r.diasTrabajados,0)}</td>
-      <td class="num">${fmtMinutos(resumen.reduce((s,r)=>s+r.totalMinutos,0))}</td>
-      <td class="num">${fmtMinutos(resumen.reduce((s,r)=>s+r.horasExtras,0))}</td>
-      <td class="num">${resumen.reduce((s,r)=>s+r.tardanzas,0)}</td>
-    </tr>
-  </tbody>
-</table>
-
+<h1>Klokin — Reporte de Asistencia</h1>
+<div class="meta"><strong>Empresa:</strong> ${empresa} &nbsp;|&nbsp; <strong>Período:</strong> ${desde} al ${hasta} &nbsp;|&nbsp; <strong>Generado:</strong> ${new Date().toLocaleString('es-EC',{timeZone:'America/Guayaquil'})} &nbsp;|&nbsp; <strong>Empleados:</strong> ${resFilas.length}</div>
+<h2>Resumen por empleado</h2>
+<table><thead><tr><th>Empleado</th><th class="num">Días trabajados</th><th class="num">Total horas</th><th class="num">Horas extras</th><th class="num">Tardanzas</th></tr></thead><tbody>
+${resFilas.map(r=>`<tr><td><strong>${r.nombre}</strong></td><td class="num">${r.dias}</td><td class="num green">${fmtM(r.totalMins)}</td><td class="num">${fmtM(r.extras)}</td><td class="num ${r.tardanzas>0?'amber':''}">${r.tardanzas}</td></tr>`).join('')}
+<tr class="total-row"><td>TOTAL</td><td class="num">${resFilas.reduce((s,r)=>s+r.dias,0)}</td><td class="num">${fmtM(resFilas.reduce((s,r)=>s+r.totalMins,0))}</td><td class="num">${fmtM(resFilas.reduce((s,r)=>s+r.extras,0))}</td><td class="num">${resFilas.reduce((s,r)=>s+r.tardanzas,0)}</td></tr>
+</tbody></table>
 <div class="page-break"></div>
-<h2>📋 Detalle de Marcaciones</h2>
-<table>
-  <thead><tr><th>Empleado</th><th>Fecha</th><th>Entrada</th><th>Salida</th><th>Horas</th><th>Ubicación</th></tr></thead>
-  <tbody>
-    ${filas.map(f => `<tr>
-      <td class="bold">${f.nombre}</td>
-      <td>${f.dia}</td>
-      <td>${f.entrada}</td>
-      <td>${f.salida}</td>
-      <td class="green">${f.horas}</td>
-      <td style="font-size:9px;color:#999">${f.ubicacion}</td>
-    </tr>`).join('')}
-    ${filas.length === 0 ? '<tr><td colspan="6" style="text-align:center;color:#999;padding:16px">Sin registros en este período</td></tr>' : ''}
-  </tbody>
-</table>
-<div class="footer">Klokin — Sistema de Control de Asistencia | clepoutr1.github.io/klokin-dashboard | Total: ${filas.length} registros de marcación</div>
+<h2>Detalle de marcaciones</h2>
+<table><thead><tr><th>Empleado</th><th>Fecha</th><th>Hora entrada</th><th>Hora salida</th><th>Horas trabajadas</th><th>Ubicación</th></tr></thead><tbody>
+${filas.map(f=>`<tr><td><strong>${f.nombre}</strong></td><td>${f.dia}</td><td>${f.entrada}</td><td>${f.salida}</td><td class="green">${f.horas}</td><td style="font-size:9px;color:#94a3b8">${f.ubicacion}</td></tr>`).join('')}
+${filas.length===0?'<tr><td colspan="6" style="text-align:center;color:#94a3b8;padding:20px">Sin registros en este período</td></tr>':''}
+</tbody></table>
+<div class="footer">Klokin — Sistema de Control de Asistencia | clepoutr1.github.io/klokin-dashboard | ${filas.length} registros</div>
 </body></html>`;
-
-  const win = window.open('', '_blank');
-  win.document.write(html);
-  win.document.close();
-  setTimeout(() => { win.print(); showToast('✅ PDF listo para imprimir'); }, 600);
+      const w=window.open('','_blank');w.document.write(html);w.document.close();
+      setTimeout(()=>{w.print();showToast('PDF listo para imprimir');},600);
+    } else {
+      const bom='\uFEFF';
+      let csv=`Reporte de Asistencia - ${empresa}\nPeriodo: ${desde} al ${hasta}\nGenerado: ${new Date().toLocaleString('es-EC',{timeZone:'America/Guayaquil'})}\n\n`;
+      csv+='RESUMEN POR EMPLEADO\nEmpleado,Dias Trabajados,Total Horas,Horas Extras,Tardanzas\n';
+      resFilas.forEach(r=>{csv+=`"${r.nombre}",${r.dias},"${fmtM(r.totalMins)}","${fmtM(r.extras)}",${r.tardanzas}\n`;});
+      csv+='\nDETALLE DE MARCACIONES\nEmpleado,Fecha,Hora Entrada,Hora Salida,Horas Trabajadas,Ubicacion\n';
+      filas.forEach(f=>{csv+=`"${f.nombre}","${f.dia}","${f.entrada}","${f.salida}","${f.horas}","${f.ubicacion}"\n`;});
+      const blob=new Blob([bom+csv],{type:'text/csv;charset=utf-8'});
+      const url=URL.createObjectURL(blob);
+      const a=document.createElement('a');a.href=url;a.download=`klokin-${desde}-${hasta}.csv`;a.click();
+      URL.revokeObjectURL(url);showToast('Reporte descargado');
+    }
+  } catch(e){showToast('Error: '+e.message);console.error(e);}
 }
 
-function generarExcelCustom(filas, resumen, empresa, desde, hasta) {
-  const bom = '\uFEFF';
-  let csv = `Reporte de Asistencia - ${empresa}\nPeriodo: ${desde} al ${hasta}\nGenerado: ${new Date().toLocaleString('es-EC',{timeZone:'America/Guayaquil'})}\n\n`;
-  csv += 'RESUMEN POR EMPLEADO\n';
-  csv += 'Empleado,Dias Trabajados,Total Horas,Horas Extras,Tardanzas\n';
-  resumen.forEach(r => {
-    csv += `"${r.nombre}",${r.diasTrabajados},"${fmtMinutos(r.totalMinutos)}","${fmtMinutos(r.horasExtras)}",${r.tardanzas}\n`;
-  });
-  csv += '\nDETALLE DE MARCACIONES\n';
-  csv += 'Empleado,Fecha,Hora Entrada,Hora Salida,Horas Trabajadas,Ubicacion (lat/lon)\n';
-  filas.forEach(f => {
-    csv += `"${f.nombre}","${f.dia}","${f.entrada}","${f.salida}","${f.horas}","${f.ubicacion}"\n`;
-  });
-  const blob = new Blob([bom + csv], {type: 'text/csv;charset=utf-8'});
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `klokin-reporte-${desde}-al-${hasta}.csv`;
-  a.click();
-  URL.revokeObjectURL(url);
-  showToast('✅ Reporte descargado — abre con Excel');
-}
-
-document.addEventListener('keypress', e => { if (e.key==='Enter' && document.getElementById('login-screen').style.display!=='none') doLogin(); });
+document.addEventListener('keypress',e=>{if(e.key==='Enter'&&document.getElementById('login-screen').style.display!=='none')doLogin();});
 checkToken();
 </script>
 </body>
