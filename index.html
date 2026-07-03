@@ -220,21 +220,10 @@ main{padding:28px 32px;max-width:1400px;margin:0 auto;display:none}
     <div id="map"></div>
   </div>
 
-  <div class="section-label">Estado del equipo</div>
-  <div class="grid-2">
-    <div class="panel">
-      <div class="panel-header">
-        <div class="panel-title">Presentes <span class="panel-count green" id="badge-presentes">0</span></div>
-      </div>
-      <div class="panel-body" id="list-presentes"><div class="loading"><div class="spinner"></div> Cargando...</div></div>
-    </div>
-    <div class="panel">
-      <div class="panel-header">
-        <div class="panel-title">Ausentes <span class="panel-count red" id="badge-ausentes">0</span></div>
-      </div>
-      <div class="panel-body" id="list-ausentes"><div class="loading"><div class="spinner"></div> Cargando...</div></div>
-    </div>
-  </div>
+  <div id="list-presentes" style="display:none"></div>
+  <div id="list-ausentes" style="display:none"></div>
+  <div id="badge-presentes" style="display:none"></div>
+  <div id="badge-ausentes" style="display:none"></div>
 
   <div class="section-label">Actividad del día</div>
   <div class="panel" style="margin-bottom:32px">
@@ -561,4 +550,3 @@ checkToken();
 </script>
 </body>
 </html>
-
