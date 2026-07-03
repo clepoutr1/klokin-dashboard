@@ -142,6 +142,18 @@ main{padding:28px 32px;max-width:1400px;margin:0 auto;display:none}
 #toast.show{transform:translateY(0);opacity:1}
 
 @media(max-width:768px){.kpi-grid{grid-template-columns:repeat(2,1fr)}.grid-2{grid-template-columns:1fr}.report-controls{grid-template-columns:1fr}main{padding:16px}}
+
+/* MODAL */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:200;display:none;align-items:center;justify-content:center}
+.modal-overlay.show{display:flex}
+.modal{background:white;border-radius:12px;width:420px;max-width:90vw;max-height:80vh;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,0.2)}
+.modal-header{padding:18px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.modal-title{font-size:15px;font-weight:600;color:var(--navy)}
+.modal-close{background:none;border:none;font-size:20px;cursor:pointer;color:var(--text-muted);line-height:1;padding:0 4px}
+.modal-close:hover{color:var(--text)}
+.modal-body{overflow-y:auto;flex:1}
+.kpi-card{cursor:pointer;transition:box-shadow .15s,border-color .15s}
+.kpi-card:hover{border-color:var(--blue);box-shadow:0 2px 8px rgba(37,99,235,0.1)}
 </style>
 </head>
 <body>
@@ -182,10 +194,10 @@ main{padding:28px 32px;max-width:1400px;margin:0 auto;display:none}
 <main id="main-content">
   <div class="section-label">Resumen del día</div>
   <div class="kpi-grid">
-    <div class="kpi-card"><div class="kpi-label">Total empleados</div><div class="kpi-value blue" id="kpi-total">—</div><div class="kpi-sub">registrados en el sistema</div></div>
-    <div class="kpi-card"><div class="kpi-label">Presentes ahora</div><div class="kpi-value green" id="kpi-presentes">—</div><div class="kpi-sub" id="kpi-pct">% de asistencia</div><div class="kpi-bar"><div class="kpi-bar-fill" id="kpi-bar" style="width:0%"></div></div></div>
-    <div class="kpi-card"><div class="kpi-label">Ausentes</div><div class="kpi-value red" id="kpi-ausentes">—</div><div class="kpi-sub">sin marcar entrada</div></div>
-    <div class="kpi-card"><div class="kpi-label">Tardanzas hoy</div><div class="kpi-value amber" id="kpi-tardanzas">—</div><div class="kpi-sub">llegaron tarde</div></div>
+    <div class="kpi-card" onclick="showModal('todos')"><div class="kpi-label">Total empleados</div><div class="kpi-value blue" id="kpi-total">—</div><div class="kpi-sub">registrados en el sistema</div></div>
+    <div class="kpi-card" onclick="showModal('presentes')"><div class="kpi-label">Presentes ahora</div><div class="kpi-value green" id="kpi-presentes">—</div><div class="kpi-sub" id="kpi-pct">% de asistencia</div><div class="kpi-bar"><div class="kpi-bar-fill" id="kpi-bar" style="width:0%"></div></div></div>
+    <div class="kpi-card" onclick="showModal('ausentes')"><div class="kpi-label">Ausentes</div><div class="kpi-value red" id="kpi-ausentes">—</div><div class="kpi-sub">sin marcar entrada</div></div>
+    <div class="kpi-card" onclick="showModal('tardanzas')"><div class="kpi-label">Tardanzas hoy</div><div class="kpi-value amber" id="kpi-tardanzas">—</div><div class="kpi-sub">llegaron tarde</div></div>
   </div>
 
   <div class="section-label">Generar reporte</div>
@@ -235,6 +247,17 @@ main{padding:28px 32px;max-width:1400px;margin:0 auto;display:none}
 </main>
 
 <div id="toast"></div>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modal-overlay" onclick="closeModal(event)">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="modal-title">Empleados</div>
+      <button class="modal-close" onclick="document.getElementById('modal-overlay').classList.remove('show')">×</button>
+    </div>
+    <div class="modal-body" id="modal-body"></div>
+  </div>
+</div>
 
 <script>
 const API = 'https://klokin-api.onrender.com/api/v1';
@@ -323,6 +346,10 @@ async function loadDashboard() {
     document.getElementById('badge-presentes').textContent = presentes.length;
     document.getElementById('badge-ausentes').textContent = ausentes.length;
 
+    _dashData.presentes = presentes;
+    _dashData.ausentes = ausentes;
+    _dashData.todos = [...presentes, ...ausentes];
+    // Tardanzas: presentes que tienen tardanza hoy (from actividad)
     document.getElementById('list-presentes').innerHTML = presentes.length===0
       ? '<div class="empty">Sin empleados presentes</div>'
       : presentes.map(e=>`<div class="emp-row"><div class="emp-avatar present">${initials((e.nombre||'?')+' '+(e.apellido||''))}</div><div class="emp-info" style="flex:1"><div class="emp-name">${e.nombre||''} ${e.apellido||''}</div><div class="emp-time">Entrada: ${fmtTime(e.ultima_entrada)}</div></div><span class="emp-badge present">Presente</span></div>`).join('');
@@ -340,6 +367,7 @@ async function loadMarcaciones() {
     if(!data.ok) return;
     const marcaciones = data.marcacionesHoy||[];
     document.getElementById('badge-actividad').textContent = marcaciones.length;
+    _dashData.tardanzas = marcaciones.filter(m=>m.tipo==='ENTRADA'&&m.es_extemporanea).map(m=>({nombre:m.nombre,apellido:m.apellido,minutos_retraso:m.minutos_retraso,presente:true,ultima_entrada:m.timestamp}));
     document.getElementById('list-actividad').innerHTML = marcaciones.length===0
       ? '<div class="empty">Sin actividad registrada hoy</div>'
       : marcaciones.slice(0,20).map(m=>`<div class="activity-item"><div class="activity-dot ${m.tipo.toLowerCase()}"></div><div class="activity-info"><div class="activity-name">${m.nombre} ${m.apellido}${m.es_extemporanea?`<span class="badge-late">+${m.minutos_retraso}min</span>`:''}${(m.latitud&&m.longitud)?'<span class="badge-geo">Ubicación</span>':''}</div><div class="activity-detail">${m.tipo}</div></div><div class="activity-time">${fmtTime(m.timestamp)}</div></div>`).join('');
@@ -493,6 +521,42 @@ ${filas.length===0?'<tr><td colspan="6" style="text-align:center;color:#94a3b8;p
 }
 
 document.addEventListener('keypress',e=>{if(e.key==='Enter'&&document.getElementById('login-screen').style.display!=='none')doLogin();});
+
+let _dashData = {presentes:[], ausentes:[], todos:[], tardanzas:[]};
+
+function showModal(tipo) {
+  const overlay = document.getElementById('modal-overlay');
+  const title = document.getElementById('modal-title');
+  const body = document.getElementById('modal-body');
+  const titles = {todos:'Todos los empleados', presentes:'Empleados presentes', ausentes:'Empleados ausentes', tardanzas:'Empleados con tardanza hoy'};
+  title.textContent = titles[tipo] || 'Empleados';
+  const lista = _dashData[tipo] || [];
+  if (lista.length === 0) {
+    body.innerHTML = '<div class="empty">Sin empleados en esta categoría</div>';
+  } else {
+    body.innerHTML = lista.map(e => {
+      const nombre = `${e.nombre||''} ${e.apellido||''}`.trim();
+      const ini = initials(nombre||'?');
+      const isPresente = e.presente;
+      const hora = e.ultima_entrada ? `<div style="font-size:11px;color:var(--text-muted)">Entrada: ${fmtTime(e.ultima_entrada)}</div>` : '';
+      const retraso = e.minutos_retraso ? `<span style="font-size:11px;background:var(--amber-light);color:var(--amber);padding:2px 6px;border-radius:3px">+${e.minutos_retraso}min</span>` : '';
+      return `<div class="emp-row">
+        <div class="emp-avatar ${isPresente!==false?'present':'absent'}">${ini}</div>
+        <div style="flex:1">
+          <div class="emp-name">${nombre} ${retraso}</div>
+          ${hora}
+        </div>
+        <span class="emp-badge ${isPresente!==false?'present':'absent'}">${isPresente!==false?'Presente':'Ausente'}</span>
+      </div>`;
+    }).join('');
+  }
+  overlay.classList.add('show');
+}
+
+function closeModal(e) {
+  if (e.target.id === 'modal-overlay') document.getElementById('modal-overlay').classList.remove('show');
+}
+
 checkToken();
 </script>
 </body>
