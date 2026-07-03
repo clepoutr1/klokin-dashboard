@@ -188,6 +188,7 @@ main{padding:28px 32px;max-width:1400px;margin:0 auto;display:none}
     <div class="header-empresa"><div class="status-indicator"></div><span id="empresa-name">Cargando...</span></div>
     <div class="header-clock" id="clock">--:--:--</div>
     <button class="btn-refresh" onclick="loadAll()">Actualizar</button>
+    <button class="btn-refresh" onclick="document.getElementById('modal-nuevo-empleado').classList.add('show')" style="background:var(--blue);border-color:var(--blue)">+ Nuevo empleado</button>
   </div>
 </header>
 
@@ -236,6 +237,35 @@ main{padding:28px 32px;max-width:1400px;margin:0 auto;display:none}
 </main>
 
 <div id="toast"></div>
+
+<!-- MODAL NUEVO EMPLEADO -->
+<div class="modal-overlay" id="modal-nuevo-empleado" onclick="closeModalNuevo(event)">
+  <div class="modal" style="width:480px">
+    <div class="modal-header">
+      <div class="modal-title">Agregar nuevo empleado</div>
+      <button class="modal-close" onclick="document.getElementById('modal-nuevo-empleado').classList.remove('show')">×</button>
+    </div>
+    <div class="modal-body" style="padding:24px">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+        <div><div class="ctrl-label">Nombre</div><input type="text" id="ne-nombre" class="ctrl-input" placeholder="Ej: Juan"></div>
+        <div><div class="ctrl-label">Apellido</div><input type="text" id="ne-apellido" class="ctrl-input" placeholder="Ej: Pérez"></div>
+      </div>
+      <div style="margin-bottom:16px"><div class="ctrl-label">Número de WhatsApp</div><input type="text" id="ne-telefono" class="ctrl-input" placeholder="593999123456 (sin +)"></div>
+      <div style="margin-bottom:16px"><div class="ctrl-label">Cédula</div><input type="text" id="ne-cedula" class="ctrl-input" placeholder="Ej: 1712345678"></div>
+      <div style="margin-bottom:24px"><div class="ctrl-label">Tipo de contrato</div>
+        <select id="ne-tipo" class="ctrl-input">
+          <option value="DIRECTO">Directo</option>
+          <option value="SUBCONTRATISTA">Subcontratista</option>
+        </select>
+      </div>
+      <div id="ne-error" style="color:var(--red);font-size:13px;margin-bottom:12px;display:none"></div>
+      <div style="display:flex;gap:12px">
+        <button onclick="document.getElementById('modal-nuevo-empleado').classList.remove('show')" style="flex:1;background:var(--gray-100);border:1px solid var(--border);border-radius:6px;padding:10px;font-size:13px;cursor:pointer">Cancelar</button>
+        <button onclick="guardarEmpleado()" style="flex:2;background:var(--navy);color:white;border:none;border-radius:6px;padding:10px;font-size:13px;font-weight:500;cursor:pointer">Guardar empleado</button>
+      </div>
+    </div>
+  </div>
+</div>
 
 <!-- MODAL -->
 <div class="modal-overlay" id="modal-overlay" onclick="closeModal(event)">
@@ -507,6 +537,53 @@ ${filas.length===0?'<tr><td colspan="6" style="text-align:center;color:#94a3b8;p
       URL.revokeObjectURL(url);showToast('Reporte descargado');
     }
   } catch(e){showToast('Error: '+e.message);console.error(e);}
+}
+
+async function guardarEmpleado() {
+  const nombre = document.getElementById('ne-nombre').value.trim();
+  const apellido = document.getElementById('ne-apellido').value.trim();
+  const telefono = document.getElementById('ne-telefono').value.trim();
+  const cedula = document.getElementById('ne-cedula').value.trim();
+  const tipo = document.getElementById('ne-tipo').value;
+  const errEl = document.getElementById('ne-error');
+  errEl.style.display = 'none';
+  if (!nombre || !apellido || !telefono || !cedula) {
+    errEl.textContent = 'Todos los campos son obligatorios';
+    errEl.style.display = 'block';
+    return;
+  }
+  if (!/^\d{10,15}$/.test(telefono)) {
+    errEl.textContent = 'El teléfono debe tener entre 10 y 15 dígitos sin +';
+    errEl.style.display = 'block';
+    return;
+  }
+  try {
+    const res = await fetch(`${API}/empleados`, {
+      method: 'POST',
+      headers: {'Authorization': `Bearer ${TOKEN}`, 'Content-Type': 'application/json'},
+      body: JSON.stringify({nombre, apellido, telefono, cedula, tipoContrato: tipo})
+    });
+    const data = await res.json();
+    if (data.ok) {
+      document.getElementById('modal-nuevo-empleado').classList.remove('show');
+      document.getElementById('ne-nombre').value = '';
+      document.getElementById('ne-apellido').value = '';
+      document.getElementById('ne-telefono').value = '';
+      document.getElementById('ne-cedula').value = '';
+      showToast('Empleado agregado correctamente');
+      loadAll();
+    } else {
+      errEl.textContent = data.error || 'Error al guardar';
+      errEl.style.display = 'block';
+    }
+  } catch(e) {
+    errEl.textContent = 'Error de conexión';
+    errEl.style.display = 'block';
+  }
+}
+
+function closeModalNuevo(e) {
+  if (e.target.id === 'modal-nuevo-empleado') document.getElementById('modal-nuevo-empleado').classList.remove('show');
 }
 
 document.addEventListener('keypress',e=>{if(e.key==='Enter'&&document.getElementById('login-screen').style.display!=='none')doLogin();});
