@@ -548,16 +548,42 @@ ${filas.length===0?'<tr><td colspan="6" style="text-align:center;color:#94a3b8;p
       const w=window.open('','_blank');w.document.write(html);w.document.close();
       setTimeout(()=>{w.print();showToast('PDF listo para imprimir');},600);
     } else {
-      const bom='\uFEFF';
-      let csv=`Reporte de Asistencia - ${empresa}\nPeriodo: ${desde} al ${hasta}\nGenerado: ${new Date().toLocaleString('es-EC',{timeZone:'America/Guayaquil'})}\n\n`;
-      csv+='RESUMEN POR EMPLEADO\nEmpleado,Dias Trabajados,Total Horas,Horas Extras,Tardanzas\n';
-      resFilas.forEach(r=>{csv+=`"${r.nombre}",${r.dias},"${fmtM(r.totalMins)}","${fmtM(r.extras)}",${r.tardanzas}\n`;});
-      csv+='\nDETALLE DE MARCACIONES\nEmpleado,Fecha,Hora Entrada,Hora Salida,Horas Trabajadas,Ubicacion\n';
-      filas.forEach(f=>{csv+=`"${f.nombre}","${f.dia}","${f.entrada}","${f.salida}","${f.horas}","${f.ubicacion}"\n`;});
-      const blob=new Blob([bom+csv],{type:'text/csv;charset=utf-8'});
-      const url=URL.createObjectURL(blob);
-      const a=document.createElement('a');a.href=url;a.download=`klokin-${desde}-${hasta}.csv`;a.click();
-      URL.revokeObjectURL(url);showToast('Reporte descargado');
+      // Cargar SheetJS si no está disponible
+      if (typeof XLSX === 'undefined') {
+        await new Promise((resolve, reject) => {
+          const s = document.createElement('script');
+          s.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+          s.onload = resolve; s.onerror = reject;
+          document.head.appendChild(s);
+        });
+      }
+      const wb = XLSX.utils.book_new();
+
+      // Hoja 1 — Resumen
+      const resumenData = [
+        ['Empresa:', empresa, '', 'Período:', desde + ' al ' + hasta],
+        ['Generado:', new Date().toLocaleString('es-EC',{timeZone:'America/Guayaquil'})],
+        [],
+        ['Empleado', 'Días Trabajados', 'Total Horas', 'Horas Extras', 'Tardanzas']
+      ];
+      resFilas.forEach(r => resumenData.push([r.nombre, r.dias, fmtM(r.totalMins), fmtM(r.extras), r.tardanzas]));
+      resumenData.push([]);
+      resumenData.push(['TOTAL', resFilas.reduce((s,r)=>s+r.dias,0), fmtM(resFilas.reduce((s,r)=>s+r.totalMins,0)), fmtM(resFilas.reduce((s,r)=>s+r.extras,0)), resFilas.reduce((s,r)=>s+r.tardanzas,0)]);
+      const ws1 = XLSX.utils.aoa_to_sheet(resumenData);
+      ws1['!cols'] = [{wch:30},{wch:16},{wch:14},{wch:14},{wch:12}];
+      XLSX.utils.book_append_sheet(wb, ws1, 'Resumen');
+
+      // Hoja 2 — Detalle
+      const detalleData = [
+        ['Empleado', 'Fecha', 'Hora Entrada', 'Hora Salida', 'Horas Trabajadas', 'Ubicación']
+      ];
+      filas.forEach(f => detalleData.push([f.nombre, f.dia, f.entrada, f.salida, f.horas, f.ubicacion]));
+      const ws2 = XLSX.utils.aoa_to_sheet(detalleData);
+      ws2['!cols'] = [{wch:28},{wch:12},{wch:14},{wch:14},{wch:16},{wch:28}];
+      XLSX.utils.book_append_sheet(wb, ws2, 'Detalle');
+
+      XLSX.writeFile(wb, `klokin-${desde}-${hasta}.xlsx`);
+      showToast('Excel descargado');
     }
   } catch(e){showToast('Error: '+e.message);console.error(e);}
 }
